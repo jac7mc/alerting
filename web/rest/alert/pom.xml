@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>alerting-web-rest</artifactId>
+        <groupId>jeff.alerting</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>alert-api</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>war</packaging>
+
+
+    <name>alert-api</name>
+
+    <properties>
+        <docker.ip>192.168.99.100</docker.ip>
+        <default.tomcat.port>8080</default.tomcat.port>
+        <forward.tomcat.port>8080</forward.tomcat.port>
+        <docker.image.name>alert-api:latest</docker.image.name>
+
+    </properties>
+
+    <build>
+            <finalName>alert-api-${project.version}</finalName>
+        <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-war-plugin</artifactId>
+                    <version>2.6</version>
+                    <configuration>
+                        <outputDirectory>${session.executionRootDirectory}/target/build</outputDirectory>
+                        <failOnMissingWebXml>false</failOnMissingWebXml>
+
+                        <!-- <attachClasses>true</attachClasses> -->
+                        <classesClassifier>classes</classesClassifier>
+                    </configuration>
+                </plugin>
+                <!-- for building Docker files, use with 'mvn clean package docker:build' -->
+                <plugin>
+                    <groupId>io.fabric8</groupId>
+                    <artifactId>docker-maven-plugin</artifactId>
+                    <configuration>
+                        <images>
+                            <image>
+                                <name>${docker.image.name}</name>
+                                <!-- Configure build settings -->
+                                <build>
+                                    <tags>
+                                        <tag>latest</tag>
+                                    </tags>
+                                    <dockerFileDir>${project.basedir}/docker</dockerFileDir>
+                                    <from>asc/tomcat:latest</from>
+                                    <assembly>
+                                        <inline>
+                                            <files>
+                                                <file>
+                                                    <source>
+                                                        ${project.basedir}/target/build/alert-api-${project.version}.war
+                                                    </source>
+                                                    <outputDirectory>webapps/</outputDirectory>
+                                                    <destName>rest.war</destName>
+                                                </file>
+                                            </files>
+                                        </inline>
+                                    </assembly>
+                                    <tags>
+                                        <tag>latest</tag>
+                                    </tags>
+                                </build>
+                                <!-- End build configuration -->
+                                <!-- Configure runtime settings for Docker container -->
+                                <run>
+                                    <namingStrategy>alias</namingStrategy>
+                                    <ports>
+                                        <port>${forward.tomcat.port}:${default.tomcat.port}</port>
+                                    </ports>
+                                    <env>
+                                        <JAVA_OPTS>${project.version}</JAVA_OPTS>
+                                    </env>
+                                    <wait>
+                                        <log>Server startup in</log>
+                                        <time>5000</time>
+                                    </wait>
+                                </run>
+                            </image>
+                        </images>
+                    </configuration>
+
+                    <executions>
+                        <execution>
+                            <id>docker:build</id>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>build</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+
+                </plugin>
+
+            </plugins>
+        </pluginManagement>
+    </build>
+</project>
